@@ -9,7 +9,9 @@ No build step, no backend, no cookies, no analytics, and no requests to other si
 | File | Purpose |
 | --- | --- |
 | `index.html` | The whole app (markup, styles and script) |
-| `favicon.svg` | Browser tab icon |
+| `favicon.svg`, `favicon.png`, `apple-touch-icon.png` | Browser tab and home-screen icons |
+| `og-image.png` | 1200x630 preview image for link sharing |
+| `robots.txt`, `sitemap.xml` | Search engine crawl hints |
 | `fonts/` | Big Shoulders Display and Space Mono (woff2, Latin subset) with their licences |
 | `Dockerfile` | nginx image that serves the page on port 8080 |
 | `nginx.conf` | Caching, compression, security headers and a `/healthz` endpoint |
@@ -53,3 +55,7 @@ Pace shows to the nearest second and distance to two decimal places, but calcula
 ## Licences
 
 The fonts are open source under the SIL Open Font License 1.1. The licence texts are in `fonts/`.
+
+## SEO
+
+The canonical URL `https://pace-converter.theomazars.com/` appears in `index.html` (canonical, Open Graph, Twitter and JSON-LD tags), `robots.txt` and `sitemap.xml`. Change all of them together if the domain moves. Update `lastmod` in `sitemap.xml` when the page content changes.
