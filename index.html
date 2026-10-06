@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#FFDE59">
+<meta name="description" content="Convert between distance, time, pace and speed. Fill in any two and the rest follow.">
+<title>Pace Converter</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/big-shoulders-display-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/space-mono-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face { font-family: 'Big Shoulders Display'; font-style: normal; font-weight: 800; font-display: swap;
+  src: url('fonts/big-shoulders-display-latin-800-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Space Mono'; font-style: normal; font-weight: 400; font-display: swap;
+  src: url('fonts/space-mono-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Space Mono'; font-style: normal; font-weight: 700; font-display: swap;
+  src: url('fonts/space-mono-latin-700-normal.woff2') format('woff2'); }
+
+/* Page reset */
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+[hidden] { display: none !important; }
+
+/* Layout: compact neo-brutalist stack sized to fit one phone screen. Each card has one header line
+   (label, unit, equivalent, status) above a single input box. White box = typed, yellow striped box = calculated.
+   Deliberately one light look: neo-brutalism needs a bright ground, so there is no dark variant. */
+:root {
+  --bg: #FFDE59;
+  --ink: #0B0B0B;
+  --paper: #FFFFFF;
+  --dot: rgba(11, 11, 11, 0.13);
+  --yellow: #FFDE59;
+  --yellow-2: #FFEE9E;
+  --hot: #FF6B5E;
+  --faint: #C7C1B3;
+  --sep: #8F897C;
+  --c-dist: #7FD1FF;
+  --c-time: #FF90B8;
+  --c-pace: #B6F36B;
+  --c-speed: #C3AEFF;
+  --display: 'Big Shoulders Display', 'Barlow Condensed', Impact, 'Arial Narrow', sans-serif;
+  --mono: 'Space Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+body {
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--dot) 1.5px, transparent 1.6px);
+  background-size: 20px 20px;
+  color: var(--ink);
+  font: 400 15px/1.4 var(--mono);
+}
+.wrap {
+  max-width: 30rem;
+  margin: 0 auto;
+  padding-block: 16px 32px;
+  padding-inline: max(14px, env(safe-area-inset-left, 0px)) max(14px, env(safe-area-inset-right, 0px));
+}
+
+header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 10px;
+}
+h1 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  margin: 0;
+  font: 800 clamp(1.5rem, 6.8vw, 2.1rem)/1 var(--display);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+h1 span {
+  padding: 0.06em 0.24em 0;
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+h1 span:first-child { background: var(--ink); color: var(--yellow); transform: rotate(-2deg); }
+h1 span:last-child { background: var(--paper); transform: rotate(1.5deg); }
+
+.lede { margin: 12px 0 16px; font-size: 0.78rem; }
+
+.units {
+  display: inline-flex;
+  background: var(--paper);
+  border: 3px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.units button {
+  font: 700 0.8rem var(--mono);
+  text-transform: uppercase;
+  min-height: 38px;
+  padding: 0 0.85rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.units button + button { border-left: 3px solid var(--ink); }
+.units button[aria-pressed="true"] { background: var(--ink); color: var(--yellow); }
+
+.rows { display: grid; gap: 14px; }
+.row {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink);
+  transition: transform 0.08s, box-shadow 0.08s;
+}
+#row-dist { background: var(--c-dist); }
+#row-time { background: var(--c-time); }
+#row-pace { background: var(--c-pace); }
+#row-speed { background: var(--c-speed); }
+.row:focus-within { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 var(--ink); }
+
+.head { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
+.label {
+  padding: 1px 8px;
+  background: var(--ink);
+  color: #fff;
+  font: 700 0.72rem var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.unit { font: 700 0.78rem var(--mono); }
+.alt { font: 700 0.75rem var(--mono); }
+.alt:not(:empty)::before { content: "= "; }
+.tag {
+  margin-left: auto;
+  padding: 0 6px;
+  background: var(--yellow);
+  border: 2px solid var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  font: 700 0.68rem var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transform: rotate(2deg);
+}
+
+.entry {
+  display: flex;
+  align-items: baseline;
+  gap: 0.1rem;
+  min-width: 0;
+  padding: 2px 10px 0;
+  background: var(--paper);
+  border: 2px solid var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.entry:focus-within { outline: 3px solid var(--ink); outline-offset: 2px; }
+.row.calc .entry { background: repeating-linear-gradient(135deg, var(--yellow) 0 9px, var(--yellow-2) 9px 18px); }
+
+.num {
+  font: 800 clamp(2rem, 9.5vw, 2.6rem)/1.1 var(--display);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  caret-color: var(--hot);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  outline: none;
+}
+.num::placeholder { color: var(--faint); opacity: 1; }
+.wide { flex: 1 1 auto; width: 100%; }
+.seg { flex: none; width: 1.25em; text-align: center; }
+.sep { font: 800 clamp(1.7rem, 8vw, 2.2rem)/1 var(--display); color: var(--sep); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  font: 700 0.72rem var(--mono);
+  text-transform: uppercase;
+  min-height: 36px;
+  padding: 0 0.6rem;
+  border: 2px solid var(--ink);
+  border-radius: 0;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 2px 2px 0 var(--ink);
+  cursor: pointer;
+  transition: transform 0.06s, box-shadow 0.06s;
+}
+.chip:active { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--ink); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--yellow); }
+
+footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
+.note { margin: 0; flex: 1 1 12rem; font-size: 0.72rem; }
+.clear {
+  font: 700 0.8rem var(--mono);
+  text-transform: uppercase;
+  min-height: 40px;
+  padding: 0 1rem;
+  border: 3px solid var(--ink);
+  border-radius: 0;
+  background: var(--hot);
+  color: var(--ink);
+  box-shadow: 3px 3px 0 var(--ink);
+  cursor: pointer;
+  transition: transform 0.06s, box-shadow 0.06s;
+}
+.clear:active { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ink); }
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+button, input { touch-action: manipulation; }
+button:focus-visible { outline: 3px dashed var(--ink); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .row, .chip, .clear { transition: none; }
+  .row:focus-within { transform: none; }
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <h1><span>Pace</span> <span>Converter</span></h1>
+    <div class="units" role="group" aria-label="Units">
+      <button type="button" id="u-km" data-unit="km" aria-pressed="true">km</button>
+      <button type="button" id="u-mi" data-unit="mi" aria-pressed="false">miles</button>
+    </div>
+  </header>
+  <p class="lede">Fill in any two. The other two follow.</p>
+
+  <div class="rows">
+    <section class="row" id="row-dist">
+      <div class="head">
+        <span class="label" id="l-dist">Distance</span>
+        <span class="unit" id="unit-dist">km</span>
+        <span class="tag" id="tag-dist" hidden>calc</span>
+      </div>
+      <div class="entry" id="entry-dist">
+        <input class="num wide" id="dist" inputmode="decimal" autocomplete="off" placeholder="0" aria-labelledby="l-dist">
+      </div>
+      <div class="chips" id="chips">
+        <button type="button" class="chip" data-km="5" aria-pressed="false">5K</button>
+        <button type="button" class="chip" data-km="10" aria-pressed="false">10K</button>
+        <button type="button" class="chip" data-km="21.0975" aria-pressed="false">Half</button>
+        <button type="button" class="chip" data-km="42.195" aria-pressed="false">Marathon</button>
+      </div>
+    </section>
+
+    <section class="row" id="row-time">
+      <div class="head">
+        <span class="label" id="l-time">Time</span>
+        <span class="unit">h : mm : ss</span>
+        <span class="tag" id="tag-time" hidden>calc</span>
+      </div>
+      <div class="entry" id="entry-time" role="group" aria-labelledby="l-time">
+        <input class="num seg" id="time-h" data-digits inputmode="numeric" autocomplete="off" maxlength="2" placeholder="0" aria-label="Hours">
+        <span class="sep" aria-hidden="true">:</span>
+        <input class="num seg" id="time-m" data-digits inputmode="numeric" autocomplete="off" maxlength="2" placeholder="00" aria-label="Minutes">
+        <span class="sep" aria-hidden="true">:</span>
+        <input class="num seg" id="time-s" data-digits inputmode="numeric" autocomplete="off" maxlength="2" placeholder="00" aria-label="Seconds">
+      </div>
+    </section>
+
+    <section class="row" id="row-pace">
+      <div class="head">
+        <span class="label" id="l-pace">Pace</span>
+        <span class="unit" id="unit-pace">min/km</span>
+        <span class="alt" id="alt-pace"></span>
+        <span class="tag" id="tag-pace" hidden>calc</span>
+      </div>
+      <div class="entry" id="entry-pace" role="group" aria-labelledby="l-pace">
+        <input class="num seg" id="pace-m" data-digits inputmode="numeric" autocomplete="off" maxlength="2" placeholder="0" aria-label="Pace minutes">
+        <span class="sep" aria-hidden="true">:</span>
+        <input class="num seg" id="pace-s" data-digits inputmode="numeric" autocomplete="off" maxlength="2" placeholder="00" aria-label="Pace seconds">
+      </div>
+    </section>
+
+    <section class="row" id="row-speed">
+      <div class="head">
+        <span class="label" id="l-speed">Speed</span>
+        <span class="unit" id="unit-speed">km/h</span>
+        <span class="alt" id="alt-speed"></span>
+        <span class="tag" id="tag-speed" hidden>calc</span>
+      </div>
+      <div class="entry" id="entry-speed">
+        <input class="num wide" id="speed" inputmode="decimal" autocomplete="off" placeholder="0" aria-labelledby="l-speed">
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    <p class="note">White box: you typed it. Yellow box: calculated. Edit a third field and the one you set earliest is recalculated.</p>
+    <button type="button" class="clear" id="clear">Clear all</button>
+  </footer>
+</main>
+
+<script>
+/* PURE:START */
+const KM_PER = { km: 1, mi: 1.609344 };
+
+/* Internal values are metric: rate = seconds per km, time = seconds, dist = km. */
+function derive(state) {
+  const out = { rate: null, time: null, dist: null };
+  for (const g of state.inputs) out[g] = state[g];
+  if (state.inputs.length === 2) {
+    const missing = ['rate', 'time', 'dist'].find(g => !state.inputs.includes(g));
+    let v;
+    if (missing === 'time') v = out.dist * out.rate;
+    else if (missing === 'dist') v = out.time / out.rate;
+    else v = out.time / out.dist;
+    out[missing] = isFinite(v) && v > 0 ? v : null;
+  }
+  return out;
+}
+function applyInput(inputs, group, hasValue) {
+  const rest = inputs.filter(x => x !== group);
+  return hasValue ? [group, ...rest].slice(0, 2) : rest;
+}
+function paceParts(secPerKm, unit) {
+  const s = Math.round(secPerKm * KM_PER[unit]);
+  return { m: Math.floor(s / 60), s: s % 60 };
+}
+function timeParts(sec) {
+  const t = Math.round(sec);
+  return { h: Math.floor(t / 3600), m: Math.floor((t % 3600) / 60), s: t % 60 };
+}
+function distText(km, unit) { return String(+(km / KM_PER[unit]).toFixed(2)); }
+function speedOf(secPerKm, unit) { return 3600 / (secPerKm * KM_PER[unit]); }
+/* PURE:END */
+
+(function () {
+  const $ = id => document.getElementById(id);
+  const pad = n => String(n).padStart(2, '0');
+
+  const el = {
+    dist: $('dist'), speed: $('speed'),
+    pm: $('pace-m'), ps: $('pace-s'),
+    th: $('time-h'), tm: $('time-m'), ts: $('time-s')
+  };
+  const entry = { dist: $('entry-dist'), time: $('entry-time'), pace: $('entry-pace'), speed: $('entry-speed') };
+  const kindOf = { dist: 'dist', speed: 'speed', 'pace-m': 'pace', 'pace-s': 'pace', 'time-h': 'time', 'time-m': 'time', 'time-s': 'time' };
+  const groupOf = { dist: 'dist', time: 'time', pace: 'rate', speed: 'rate' };
+
+  let unit = 'km';
+  try { if (localStorage.getItem('pace-unit') === 'mi') unit = 'mi'; } catch (e) {}
+
+  /* Starting example: a 10 km run at 5:30 per km. */
+  const state = { rate: 330, time: null, dist: 10, inputs: ['dist', 'rate'], rateSource: 'pace' };
+
+  function parseNum(s) {
+    s = s.replace(',', '.').trim();
+    if (s === '' || s === '.' || !/^\d*\.?\d*$/.test(s)) return null;
+    return parseFloat(s);
+  }
+  function readValue(kind) {
+    if (kind === 'dist') {
+      const n = parseNum(el.dist.value);
+      return n > 0 ? n * KM_PER[unit] : null;
+    }
+    if (kind === 'speed') {
+      const n = parseNum(el.speed.value);
+      return n > 0 ? 3600 / (n * KM_PER[unit]) : null;
+    }
+    if (kind === 'time') {
+      if (!el.th.value && !el.tm.value && !el.ts.value) return null;
+      const t = (+el.th.value || 0) * 3600 + (+el.tm.value || 0) * 60 + (+el.ts.value || 0);
+      return t > 0 ? t : null;
+    }
+    if (!el.pm.value && !el.ps.value) return null;
+    const s = (+el.pm.value || 0) * 60 + (+el.ps.value || 0);
+    return s > 0 ? s / KM_PER[unit] : null;
+  }
+
+  function setRow(name, on) {
+    $('row-' + name).classList.toggle('calc', on);
+    $('tag-' + name).hidden = !on;
+  }
+
+  function render(force) {
+    const view = derive(state);
+    const active = document.activeElement;
+    const skip = name => !force && entry[name].contains(active);
+    const { rate, time, dist } = view;
+    const other = unit === 'km' ? 'mi' : 'km';
+
+    if (!skip('dist')) el.dist.value = dist ? distText(dist, unit) : '';
+    if (!skip('time')) {
+      if (time) {
+        const t = timeParts(time);
+        el.th.value = t.h; el.tm.value = pad(t.m); el.ts.value = pad(t.s);
+      } else { el.th.value = ''; el.tm.value = ''; el.ts.value = ''; }
+    }
+    if (!skip('pace')) {
+      if (rate) {
+        const p = paceParts(rate, unit);
+        el.pm.value = p.m; el.ps.value = pad(p.s);
+      } else { el.pm.value = ''; el.ps.value = ''; }
+    }
+    if (!skip('speed')) el.speed.value = rate ? speedOf(rate, unit).toFixed(2) : '';
+
+    const derived = state.inputs.length === 2 ? ['rate', 'time', 'dist'].find(g => !state.inputs.includes(g)) : null;
+    const rateIsInput = state.inputs.includes('rate');
+    setRow('dist', derived === 'dist' && !!dist);
+    setRow('time', derived === 'time' && !!time);
+    setRow('pace', !!rate && (derived === 'rate' || (rateIsInput && state.rateSource === 'speed')));
+    setRow('speed', !!rate && (derived === 'rate' || (rateIsInput && state.rateSource === 'pace')));
+
+    if (rate) {
+      const p = paceParts(rate, other);
+      $('alt-pace').textContent = p.m + ':' + pad(p.s) + (other === 'mi' ? ' /mi' : ' /km');
+      $('alt-speed').textContent = speedOf(rate, other).toFixed(2) + (other === 'mi' ? ' mph' : ' km/h');
+    } else {
+      $('alt-pace').textContent = '';
+      $('alt-speed').textContent = '';
+    }
+
+    $('unit-dist').textContent = unit === 'km' ? 'km' : 'miles';
+    $('unit-pace').textContent = unit === 'km' ? 'min/km' : 'min/mile';
+    $('unit-speed').textContent = unit === 'km' ? 'km/h' : 'mph';
+    document.querySelectorAll('.units button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.unit === unit)));
+    document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(!!state.inputs.includes('dist') && Math.abs(state.dist - +c.dataset.km) < 0.005)));
+  }
+
+  document.addEventListener('input', e => {
+    const t = e.target;
+    const kind = kindOf[t.id];
+    if (!kind) return;
+    delete t.dataset.fresh;
+    t.value = t.hasAttribute('data-digits') ? t.value.replace(/\D/g, '') : t.value.replace(/[^\d.,]/g, '');
+    const group = groupOf[kind];
+    const v = readValue(kind);
+    if (v !== null) {
+      state[group] = v;
+      if (group === 'rate') state.rateSource = kind;
+    }
+    state.inputs = applyInput(state.inputs, group, v !== null);
+    render(false);
+  });
+
+  /* Select the whole value on focus so typing replaces it. Only if the field is still focused:
+     select() moves focus in Chrome, so a stale timer would otherwise steal it back. */
+  document.addEventListener('focusin', e => {
+    const t = e.target;
+    if (t.classList && t.classList.contains('num')) {
+      t.dataset.fresh = '1';
+      setTimeout(() => { if (document.activeElement === t && t.dataset.fresh === '1') t.select(); }, 0);
+    }
+  });
+  document.addEventListener('focusout', () => setTimeout(() => render(false), 0));
+
+  document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
+    state.dist = +c.dataset.km;
+    state.inputs = applyInput(state.inputs, 'dist', true);
+    render(true);
+  }));
+  document.querySelectorAll('.units button').forEach(b => b.addEventListener('click', () => {
+    unit = b.dataset.unit;
+    try { localStorage.setItem('pace-unit', unit); } catch (e) {}
+    render(true);
+  }));
+  $('clear').addEventListener('click', () => {
+    state.inputs = [];
+    render(true);
+    el.dist.focus();
+  });
+
+  render(true);
+})();
+</script>
+</body>
+</html>
