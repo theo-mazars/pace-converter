@@ -348,8 +348,7 @@ function speedOf(secPerKm, unit) { return 3600 / (secPerKm * KM_PER[unit]); }
   let unit = 'km';
   try { if (localStorage.getItem('pace-unit') === 'mi') unit = 'mi'; } catch (e) {}
 
-  /* Starting example: a 10 km run at 5:30 per km. */
-  const state = { rate: 330, time: null, dist: 10, inputs: ['dist', 'rate'], rateSource: 'pace' };
+  const state = { rate: null, time: null, dist: null, inputs: [], rateSource: 'pace' };
 
   function parseNum(s) {
     s = s.replace(',', '.').trim();
