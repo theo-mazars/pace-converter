@@ -154,6 +154,9 @@ h1 span:last-child { background: var(--paper); transform: rotate(1.5deg); }
   box-shadow: 3px 3px 0 var(--ink);
 }
 .entry:focus-within { outline: 3px solid var(--ink); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .entry:focus-within { outline: none; }
+}
 .row.calc .entry { background: repeating-linear-gradient(135deg, var(--yellow) 0 9px, var(--yellow-2) 9px 18px); }
 
 .num {
@@ -234,6 +237,7 @@ button:focus-visible { outline: 3px dashed var(--ink); outline-offset: 3px; }
       <div class="head">
         <span class="label" id="l-dist">Distance</span>
         <span class="unit" id="unit-dist">km</span>
+        <span class="alt" id="alt-dist"></span>
         <span class="tag" id="tag-dist" hidden>calc</span>
       </div>
       <div class="entry" id="entry-dist">
@@ -406,6 +410,8 @@ function speedOf(secPerKm, unit) { return 3600 / (secPerKm * KM_PER[unit]); }
     setRow('pace', !!rate && (derived === 'rate' || (rateIsInput && state.rateSource === 'speed')));
     setRow('speed', !!rate && (derived === 'rate' || (rateIsInput && state.rateSource === 'pace')));
 
+    $('alt-dist').textContent = dist ? distText(dist, other) + (other === 'mi' ? ' mi' : ' km') : '';
+
     if (rate) {
       const p = paceParts(rate, other);
       $('alt-pace').textContent = p.m + ':' + pad(p.s) + (other === 'mi' ? ' /mi' : ' /km');
@@ -436,6 +442,13 @@ function speedOf(secPerKm, unit) { return 3600 / (secPerKm * KM_PER[unit]); }
     }
     state.inputs = applyInput(state.inputs, group, v !== null);
     render(false);
+
+    /* Jump to the next segment once this one is full (typing only, so backspace doesn't bounce). */
+    if (t.classList.contains('seg') && t.value.length >= t.maxLength && e.inputType && e.inputType.startsWith('insert')) {
+      const segs = [...t.parentElement.querySelectorAll('.seg')];
+      const next = segs[segs.indexOf(t) + 1];
+      if (next) next.focus();
+    }
   });
 
   /* Select the whole value on focus so typing replaces it. Only if the field is still focused:
@@ -447,6 +460,12 @@ function speedOf(secPerKm, unit) { return 3600 / (secPerKm * KM_PER[unit]); }
       setTimeout(() => { if (document.activeElement === t && t.dataset.fresh === '1') t.select(); }, 0);
     }
   });
+  /* Clicking anywhere on a box (padding, separators, labels) focuses its first field. */
+  document.querySelectorAll('.row').forEach(row => row.addEventListener('click', e => {
+    if (e.target.closest('input, button')) return;
+    const first = row.querySelector('input');
+    if (first) first.focus();
+  }));
   document.addEventListener('focusout', () => setTimeout(() => render(false), 0));
 
   document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', () => {
