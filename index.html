@@ -195,7 +195,7 @@ h1 span:last-child { background: var(--paper); transform: rotate(1.5deg); }
 .chip:active { transform: translate(2px, 2px); box-shadow: 0 0 0 var(--ink); }
 .chip[aria-pressed="true"] { background: var(--ink); color: var(--yellow); }
 
-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
+footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: right; gap: 12px; margin-top: 18px; }
 .note { margin: 0; flex: 1 1 12rem; font-size: 0.72rem; }
 .clear {
   font: 700 0.8rem var(--mono);
@@ -294,7 +294,6 @@ button:focus-visible { outline: 3px dashed var(--ink); outline-offset: 3px; }
   </div>
 
   <footer>
-    <p class="note">White box: you typed it. Yellow box: calculated. Edit a third field and the one you set earliest is recalculated.</p>
     <button type="button" class="clear" id="clear">Clear all</button>
   </footer>
 </main>
