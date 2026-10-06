@@ -21,6 +21,7 @@
 /* Page reset */
 :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
 body { margin: 0; }
+:root[data-unit="mi"] { --bg: var(--bg-mi); --bg-2: var(--bg-mi-2); }
 [hidden] { display: none !important; }
 
 /* Layout: compact neo-brutalist stack sized to fit one phone screen. Each card has one header line
@@ -28,6 +29,9 @@ body { margin: 0; }
    Deliberately one light look: neo-brutalism needs a bright ground, so there is no dark variant. */
 :root {
   --bg: #FFDE59;
+  --bg-2: #FFEE9E;
+  --bg-mi: #FFB38A;
+  --bg-mi-2: #FFD9C2;
   --ink: #0B0B0B;
   --paper: #FFFFFF;
   --dot: rgba(11, 11, 11, 0.13);
@@ -79,7 +83,7 @@ h1 span {
   border: 3px solid var(--ink);
   box-shadow: 3px 3px 0 var(--ink);
 }
-h1 span:first-child { background: var(--ink); color: var(--yellow); transform: rotate(-2deg); }
+h1 span:first-child { background: var(--ink); color: var(--bg); transform: rotate(-2deg); }
 h1 span:last-child { background: var(--paper); transform: rotate(1.5deg); }
 
 .lede { margin: 12px 0 16px; font-size: 0.78rem; }
@@ -157,7 +161,7 @@ h1 span:last-child { background: var(--paper); transform: rotate(1.5deg); }
 @media (hover: hover) and (pointer: fine) {
   .entry:focus-within { outline: none; }
 }
-.row.calc .entry { background: repeating-linear-gradient(135deg, var(--yellow) 0 9px, var(--yellow-2) 9px 18px); }
+.row.calc .entry { background: repeating-linear-gradient(135deg, var(--bg) 0 9px, var(--bg-2) 9px 18px); }
 
 .num {
   font: 800 clamp(2rem, 9.5vw, 2.6rem)/1.1 var(--display);
@@ -419,6 +423,8 @@ function speedOf(secPerKm, unit) { return 3600 / (secPerKm * KM_PER[unit]); }
       $('alt-speed').textContent = '';
     }
 
+    document.documentElement.dataset.unit = unit;
+    document.querySelector('meta[name="theme-color"]').content = unit === 'mi' ? '#FFB38A' : '#FFDE59';
     $('unit-dist').textContent = unit === 'km' ? 'km' : 'miles';
     $('unit-pace').textContent = unit === 'km' ? 'min/km' : 'min/mile';
     $('unit-speed').textContent = unit === 'km' ? 'km/h' : 'mph';
